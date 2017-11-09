@@ -45,7 +45,7 @@ let rec iter_s f l =
     iter_s f l
 
 let iter_p f l =
-  let ts = tail_recursive_map f l in
+  let ts = tail_recursive_map (Lwt.apply f) l in
   Lwt.join ts
 
 let rec iteri_s i f l =

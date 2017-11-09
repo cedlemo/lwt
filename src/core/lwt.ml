@@ -1649,8 +1649,7 @@ struct
              [Proxy _] links, and it's not necessary to worry about whether the
              inductive reasoning at [may_now_be_proxy] applies. *)
 
-        let State_may_have_changed p' =
-          resolve ~allow_deferring:false p' p_result in
+        let State_may_have_changed p' = resolve p' p_result in
         ignore p'
       in
 
@@ -1681,8 +1680,7 @@ struct
            this is as in [protected] and [may_now_be_proxy], but even simpler,
            because [p'] is not cancelable. *)
 
-        let State_may_have_changed p' =
-          resolve ~allow_deferring:false p' p_result in
+        let State_may_have_changed p' = resolve p' p_result in
         ignore p'
       in
       add_implicitly_removed_callback p_callbacks callback;
@@ -1902,8 +1900,8 @@ struct
     match p.state with
     | Fulfilled v ->
       run_callback_or_defer_it
-        ~run_immediately_and_ensure_tail_call:true
-        ~callback:(fun () -> f v)
+        ~run_immediately_and_ensure_tail_call:false
+        ~callback:(fun () -> try f v with exn -> fail exn)
         ~if_deferred:(fun () ->
           let (p'', callback) =
             create_result_promise_and_callback_if_deferred () in
@@ -1953,8 +1951,8 @@ struct
     match p.state with
     | Fulfilled v ->
       run_callback_or_defer_it
-        ~run_immediately_and_ensure_tail_call:true
-        ~callback:(fun () -> f v)
+        ~run_immediately_and_ensure_tail_call:false
+        ~callback:(fun () -> try f v with exn -> fail exn)
         ~if_deferred:(fun () ->
           let (p'', callback) =
             create_result_promise_and_callback_if_deferred () in
@@ -2002,7 +2000,7 @@ struct
     match p.state with
     | Fulfilled v ->
       run_callback_or_defer_it
-        ~run_immediately_and_ensure_tail_call:true
+        ~run_immediately_and_ensure_tail_call:false
         ~callback:(fun () ->
           to_public_promise
             {state = try Fulfilled (f v) with exn -> Rejected exn})
@@ -2059,8 +2057,8 @@ struct
 
     | Rejected exn ->
       run_callback_or_defer_it
-        ~run_immediately_and_ensure_tail_call:true
-        ~callback:(fun () -> h exn)
+        ~run_immediately_and_ensure_tail_call:false
+        ~callback:(fun () -> try h exn with exn' -> fail exn')
         ~if_deferred:(fun () ->
           let (p'', callback) =
             create_result_promise_and_callback_if_deferred () in
@@ -2111,8 +2109,8 @@ struct
 
     | Rejected exn ->
       run_callback_or_defer_it
-        ~run_immediately_and_ensure_tail_call:true
-        ~callback:(fun () -> h (add_loc exn))
+        ~run_immediately_and_ensure_tail_call:false
+        ~callback:(fun () -> try h (add_loc exn) with exn' -> fail exn')
         ~if_deferred:(fun () ->
           let (p'', callback) =
             create_result_promise_and_callback_if_deferred () in
@@ -2165,8 +2163,8 @@ struct
     match p.state with
     | Fulfilled v ->
       run_callback_or_defer_it
-        ~run_immediately_and_ensure_tail_call:true
-        ~callback:(fun () -> f' v)
+        ~run_immediately_and_ensure_tail_call:false
+        ~callback:(fun () -> try f' v with exn -> fail exn)
         ~if_deferred:(fun () ->
           let (p'', callback) =
             create_result_promise_and_callback_if_deferred () in
@@ -2174,8 +2172,8 @@ struct
 
     | Rejected exn ->
       run_callback_or_defer_it
-        ~run_immediately_and_ensure_tail_call:true
-        ~callback:(fun () -> h exn)
+        ~run_immediately_and_ensure_tail_call:false
+        ~callback:(fun () -> try h exn with exn' -> fail exn')
         ~if_deferred:(fun () ->
           let (p'', callback) =
             create_result_promise_and_callback_if_deferred () in
@@ -2228,8 +2226,8 @@ struct
     match p.state with
     | Fulfilled v ->
       run_callback_or_defer_it
-        ~run_immediately_and_ensure_tail_call:true
-        ~callback:(fun () -> f' v)
+        ~run_immediately_and_ensure_tail_call:false
+        ~callback:(fun () -> try f' v with exn -> fail exn)
         ~if_deferred:(fun () ->
           let (p'', callback) =
             create_result_promise_and_callback_if_deferred () in
@@ -2238,7 +2236,7 @@ struct
     | Rejected exn ->
       run_callback_or_defer_it
         ~run_immediately_and_ensure_tail_call:true
-        ~callback:(fun () -> h (add_loc exn))
+        ~callback:(fun () -> try h (add_loc exn) with exn' -> fail exn')
         ~if_deferred:(fun () ->
           let (p'', callback) =
             create_result_promise_and_callback_if_deferred () in
@@ -2268,7 +2266,7 @@ struct
     match p.state with
     | Rejected Canceled ->
       run_callback_or_defer_it
-        ~run_immediately_and_ensure_tail_call:true
+        ~run_immediately_and_ensure_tail_call:false
         ~callback:(fun () -> handle_with_async_exception_hook f ())
         ~if_deferred:(fun () ->
           ((), (fun _ -> handle_with_async_exception_hook f ()), Fulfilled ()))
@@ -2304,7 +2302,7 @@ struct
     match p.state with
     | Fulfilled v ->
       run_callback_or_defer_it
-        ~run_immediately_and_ensure_tail_call:true
+        ~run_immediately_and_ensure_tail_call:false
         ~callback:(fun () -> handle_with_async_exception_hook f v)
         ~if_deferred:(fun () ->
           let callback = callback_if_deferred () in
@@ -2340,7 +2338,7 @@ struct
 
     | Rejected exn ->
       run_callback_or_defer_it
-        ~run_immediately_and_ensure_tail_call:true
+        ~run_immediately_and_ensure_tail_call:false
         ~callback:(fun () -> handle_with_async_exception_hook f exn)
         ~if_deferred:(fun () ->
           let callback = callback_if_deferred () in
@@ -2365,7 +2363,7 @@ struct
     match p.state with
     | Fulfilled _ ->
       run_callback_or_defer_it
-        ~run_immediately_and_ensure_tail_call:true
+        ~run_immediately_and_ensure_tail_call:false
         ~callback:(fun () -> handle_with_async_exception_hook f ())
         ~if_deferred:(fun () ->
           let callback = callback_if_deferred () in
@@ -2373,7 +2371,7 @@ struct
 
     | Rejected _ ->
       run_callback_or_defer_it
-      ~run_immediately_and_ensure_tail_call:true
+      ~run_immediately_and_ensure_tail_call:false
         ~callback:(fun () -> handle_with_async_exception_hook f ())
         ~if_deferred:(fun () ->
           let callback = callback_if_deferred () in
@@ -2404,7 +2402,7 @@ struct
     match p.state with
     | Fulfilled v ->
       run_callback_or_defer_it
-        ~run_immediately_and_ensure_tail_call:true
+        ~run_immediately_and_ensure_tail_call:false
         ~callback:(fun () -> handle_with_async_exception_hook f v)
         ~if_deferred:(fun () ->
           let callback = callback_if_deferred () in
@@ -2412,7 +2410,7 @@ struct
 
     | Rejected exn ->
       run_callback_or_defer_it
-        ~run_immediately_and_ensure_tail_call:true
+        ~run_immediately_and_ensure_tail_call:false
         ~callback:(fun () -> handle_with_async_exception_hook g exn)
         ~if_deferred:(fun () ->
           let callback = callback_if_deferred () in
@@ -2509,8 +2507,7 @@ struct
       number_pending_in_ps := !number_pending_in_ps - 1;
       if !number_pending_in_ps = 0 then begin
         let p' = underlying p' in
-        let State_may_have_changed p' =
-          resolve ~allow_deferring:false (underlying p') !join_result in
+        let State_may_have_changed p' = resolve (underlying p') !join_result in
         ignore p'
       end
     in
@@ -2624,8 +2621,7 @@ struct
       let callback result =
         let State_may_now_be_pending_proxy p = may_now_be_proxy p in
         let p = underlying p in
-        let State_may_have_changed p =
-          resolve ~allow_deferring:false p result in
+        let State_may_have_changed p = resolve p result in
         ignore p
       in
       add_explicitly_removable_callback_to_each_of ps callback;
@@ -2647,8 +2643,7 @@ struct
         let State_may_now_be_pending_proxy p = may_now_be_proxy p in
         List.iter cancel ps;
         let p = underlying p in
-        let State_may_have_changed p =
-          resolve ~allow_deferring:false p result in
+        let State_may_have_changed p = resolve p result in
         ignore p
       in
       add_explicitly_removable_callback_to_each_of ps callback;
@@ -2725,8 +2720,7 @@ struct
           let State_may_now_be_pending_proxy p = may_now_be_proxy p in
           let p = underlying p in
           let result = collect_fulfilled_promises_after_pending [] ps in
-          let State_may_have_changed p =
-            resolve ~allow_deferring:false p result in
+          let State_may_have_changed p = resolve p result in
           ignore p
         in
         add_explicitly_removable_callback_to_each_of ps callback;
@@ -2782,8 +2776,7 @@ struct
           let p = underlying p in
           let result = collect_fulfilled_promises_after_pending [] ps in
           List.iter cancel ps;
-          let State_may_have_changed p =
-            resolve ~allow_deferring:false p result in
+          let State_may_have_changed p = resolve p result in
           ignore p
         in
         add_explicitly_removable_callback_to_each_of ps callback;
@@ -2820,8 +2813,7 @@ struct
 
       match ps with
       | [] ->
-        resolve ~allow_deferring:false to_resolve
-          (Fulfilled (List.rev fulfilled, List.rev pending))
+        resolve to_resolve (Fulfilled (List.rev fulfilled, List.rev pending))
 
       | p::ps ->
         let Internal p_internal = to_internal_promise p in
@@ -2830,7 +2822,7 @@ struct
           finish to_resolve (v::fulfilled) pending ps
 
         | Rejected _ as result ->
-          resolve ~allow_deferring:false to_resolve result
+          resolve to_resolve result
 
         | Pending _ ->
           finish to_resolve fulfilled (p::pending) ps
